@@ -11,7 +11,7 @@
   <title>積志駅への経路</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0b0f1a; color: #c8d8e8; min-height: 100dvh; font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+    body { background: #0b0f1a; color: #c8d8e8; min-height: 100vh; min-height: 100dvh; font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
     header { padding: 20px 16px; background: linear-gradient(135deg, #0e3a5c, #0a2240); border-bottom: 1px solid #1a3a55; }
     h1 { font-size: 17px; font-weight: 700; color: #fff; }
     main { padding: 24px 16px; display: flex; flex-direction: column; gap: 16px; }
@@ -31,16 +31,38 @@
     var STATION = "積志駅 静岡県";
     var coords = null;
     var failed = false;
+    var pending = false;
+    var msgShown = false;
+    var msgEl = document.getElementById("msg");
 
-    function getPos() {
-      if (!navigator.geolocation) { failed = true; return; }
-      navigator.geolocation.getCurrentPosition(function (p) {
-        coords = p.coords.latitude + "," + p.coords.longitude;
-        failed = false;
-      }, function () { failed = true; }, { timeout: 10000 });
+    function showMsg() {
+      msgShown = true;
+      msgEl.textContent = failed
+        ? "位置情報が取れませんでした。マップ側で現在地を指定してください"
+        : "位置情報を取得中です。マップ側で現在地を使います";
     }
 
-    function buildUrl(here, toStation, pos) {
+    function fail() {
+      pending = false;
+      failed = true;
+      coords = null;
+      if (msgShown) showMsg();
+    }
+
+    function getPos() {
+      if (pending) return;
+      if (!navigator.geolocation) { failed = true; coords = null; return; }
+      pending = true;
+      navigator.geolocation.getCurrentPosition(function (p) {
+        pending = false;
+        failed = false;
+        coords = p.coords.latitude + "," + p.coords.longitude;
+        msgShown = false;
+        msgEl.textContent = "";
+      }, fail, { timeout: 10000, maximumAge: 60000 });
+    }
+
+    function buildUrl(toStation, pos) {
       var st = encodeURIComponent(STATION);
       var p = pos ? encodeURIComponent(pos) : "";
       var o = toStation ? p : st;
@@ -53,11 +75,15 @@
 
     function go(toStation) {
       if (!coords) {
-        document.getElementById("msg").textContent = "位置情報が取れませんでした。マップ側で現在地を指定してください";
+        showMsg();
         getPos();
       }
-      window.open(buildUrl(null, toStation, coords), "_blank");
+      window.open(buildUrl(toStation, coords), "_blank");
     }
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") getPos();
+    });
 
     document.getElementById("to").onclick = function () { go(true); };
     document.getElementById("from").onclick = function () { go(false); };
