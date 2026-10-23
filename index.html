@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="積志駅への経路" />
+  <meta name="theme-color" content="#0a2240" />
+  <link rel="icon" href="data:," />
+  <title>積志駅への経路</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0b0f1a; color: #c8d8e8; min-height: 100dvh; font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+    header { padding: 20px 16px; background: linear-gradient(135deg, #0e3a5c, #0a2240); border-bottom: 1px solid #1a3a55; }
+    h1 { font-size: 17px; font-weight: 700; color: #fff; }
+    main { padding: 24px 16px; display: flex; flex-direction: column; gap: 16px; }
+    button { width: 100%; min-height: 64px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; background: #0e3a5c; color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; }
+    button:active { background: #0a2240; }
+    #msg { font-size: 13px; color: #6a94b8; text-align: center; min-height: 1.5em; }
+  </style>
+</head>
+<body>
+  <header><h1>積志駅への経路</h1></header>
+  <main>
+    <button id="to">現在地 → 積志駅</button>
+    <button id="from">積志駅 → 現在地</button>
+    <p id="msg"></p>
+  </main>
+  <script>
+    var STATION = "積志駅 静岡県";
+    var coords = null;
+    var failed = false;
+
+    function getPos() {
+      if (!navigator.geolocation) { failed = true; return; }
+      navigator.geolocation.getCurrentPosition(function (p) {
+        coords = p.coords.latitude + "," + p.coords.longitude;
+        failed = false;
+      }, function () { failed = true; }, { timeout: 10000 });
+    }
+
+    function buildUrl(here, toStation, pos) {
+      var st = encodeURIComponent(STATION);
+      var p = pos ? encodeURIComponent(pos) : "";
+      var o = toStation ? p : st;
+      var d = toStation ? st : p;
+      var url = "https://www.google.com/maps/dir/?api=1";
+      if (o) url += "&origin=" + o;
+      if (d) url += "&destination=" + d;
+      return url + "&travelmode=transit";
+    }
+
+    function go(toStation) {
+      if (!coords) {
+        document.getElementById("msg").textContent = "位置情報が取れませんでした。マップ側で現在地を指定してください";
+        getPos();
+      }
+      window.open(buildUrl(null, toStation, coords), "_blank");
+    }
+
+    document.getElementById("to").onclick = function () { go(true); };
+    document.getElementById("from").onclick = function () { go(false); };
+    getPos();
+  </script>
+</body>
+</html>
